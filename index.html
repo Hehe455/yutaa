@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>View Groups 💜</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/8.3.2/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.3.2/firebase-firestore.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBOmm5l-irq0K9FfYi2soctX1fetc613Rc",
+  authDomain: "yuta-f0c26.firebaseapp.com",
+  projectId: "yuta-f0c26",
+  storageBucket: "yuta-f0c26.firebasestorage.app",
+  messagingSenderId: "947699204653",
+  appId: "1:947699204653:web:1f530ffc40c4f58c63aea4"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+</script>
+<style>
+body {
+  font-family: 'Quicksand', sans-serif;
+  background:#fdf6fb;
+  margin:0;
+  padding:20px;
+  color:#333;
+  position: relative;
+  overflow-x: hidden;
+}
+header { text-align:center; margin-bottom:30px; }
+h1 { color:#b344b3; margin-bottom:5px; }
+.group-card {
+  padding:15px;
+  border:2px solid #b344b3;
+  border-radius:10px;
+  min-width:200px;
+  flex:1 1 200px;
+  cursor:pointer;
+  position: relative;
+  text-align:center;
+  background:white;
+  box-shadow:0 4px 10px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+}
+.group-card:hover { transform: translateY(-3px); }
+.notification-dot {
+  width:12px;
+  height:12px;
+  background:red;
+  border-radius:50%;
+  position:absolute;
+  top:10px;
+  right:10px;
+}
+#groupsContainer { display:flex; flex-wrap:wrap; gap:15px; justify-content:center; }
+
+/* Hearts */
+.heart {
+  position: fixed;
+  width: 20px;
+  height: 20px;
+  background: #b344b3;
+  transform: rotate(-45deg);
+  left: 50%;
+  top: 50%;
+  animation: float 4s linear infinite;
+  opacity: 0.8;
+  pointer-events: none;
+  z-index: 0;
+}
+.heart::before, .heart::after {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: #b344b3;
+  border-radius: 50%;
+}
+.heart::before { top: -10px; left: 0; }
+.heart::after { left: 10px; top: 0; }
+@keyframes float {
+  0% { transform: translate(0,0) rotate(-45deg); opacity:0.8; }
+  100% { transform: translate(calc(-200px + 400px * var(--rand-x)), -600px) rotate(-45deg); opacity:0; }
+}
+</style>
+<body>
+<header>
+  <h1>Groups 💜</h1>
+  <p>Click a group to view its items.</p>
+</header>
+
+<div id="groupsContainer"></div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const groupsContainer = document.getElementById("groupsContainer");
+
+  // Fetch all groups
+  db.collection("sections").get().then(snapshot => {
+    snapshot.docs.forEach(doc => {
+      const groupId = doc.id;
+      const groupName = doc.data().name || groupId;
+      const lastUpdated = doc.data().lastUpdated ? doc.data().lastUpdated.toMillis() : 0;
+      const lastOpened = parseInt(localStorage.getItem(`lastOpened_${groupId}`)) || 0;
+
+      const card = document.createElement("div");
+      card.className = "group-card";
+      card.textContent = groupName;
+
+      const dot = document.createElement("span");
+      dot.className="notification-dot";
+      dot.style.display = lastUpdated > lastOpened ? "inline-block":"none";
+      card.appendChild(dot);
+
+      card.addEventListener("click", () => {
+        localStorage.setItem(`lastOpened_${groupId}`, Date.now());
+        window.location.href = `group.html?id=${groupId}`;
+      });
+
+      groupsContainer.appendChild(card);
+    });
+  });
+
+  // Floating hearts
+  function createHeart() {
+    const heart = document.createElement("div");
+    heart.className = "heart";
+    heart.style.left = Math.random() * window.innerWidth + "px";
+    heart.style.setProperty('--rand-x', Math.random());
+    document.body.appendChild(heart);
+    setTimeout(() => { heart.remove(); }, 4000);
+  }
+  setInterval(createHeart, 500);
+});
+</script>
+</body>
+</html>

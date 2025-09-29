@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Group Items 💜</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/8.3.2/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.3.2/firebase-firestore.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBOmm5l-irq0K9FfYi2soctX1fetc613Rc",
+  authDomain: "yuta-f0c26.firebaseapp.com",
+  projectId: "yuta-f0c26",
+  storageBucket: "yuta-f0c26.firebasestorage.app",
+  messagingSenderId: "947699204653",
+  appId: "1:947699204653:web:1f530ffc40c4f58c63aea4"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+</script>
+<style>
+body {
+  font-family: 'Quicksand', sans-serif;
+  background:#fdf6fb;
+  margin:0;
+  padding:20px;
+  color:#333;
+  position: relative;
+  overflow-x: hidden;
+}
+header {
+  text-align:center;
+  margin-bottom:30px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+}
+h1 { color:#b344b3; margin-bottom:5px; }
+button {
+  padding:8px 15px;
+  border:none;
+  border-radius:6px;
+  background:#b344b3;
+  color:white;
+  cursor:pointer;
+  transition: background 0.2s, transform 0.3s;
+}
+button:hover { background:#9a2fa6; }
+#itemsContainer { display:flex; flex-direction:column; align-items:center; gap:15px; min-height:150px; }
+
+.card {
+  background:white;
+  border:2px solid #b344b3;
+  border-radius:12px;
+  padding:20px;
+  max-width:400px;
+  width:100%;
+  box-shadow:0 4px 10px rgba(0,0,0,0.1);
+  text-align:center;
+  font-size:18px;
+  position:relative;
+  transition: transform 0.5s ease, opacity 0.5s ease;
+}
+.card.swipe-out { transform: translateX(100%) rotate(5deg); opacity:0; }
+.card.swipe-in { transform: translateX(-100%) rotate(-5deg); opacity:0; animation: swipeIn 0.5s forwards; }
+@keyframes swipeIn {
+  0% { transform: translateX(-100%) rotate(-5deg); opacity:0; }
+  100% { transform: translateX(0) rotate(0deg); opacity:1; }
+}
+.list-card {
+  background:white;
+  border:2px solid #b344b3;
+  border-radius:12px;
+  padding:15px;
+  max-width:400px;
+  width:100%;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+  margin-bottom:10px;
+}
+#homeBtn { align-self:center; margin-top:10px; }
+
+/* Hearts */
+.heart {
+  position: fixed;
+  width: 20px;
+  height: 20px;
+  background: #b344b3;
+  transform: rotate(-45deg);
+  left: 50%;
+  top: 50%;
+  animation: float 4s linear infinite;
+  opacity: 0.8;
+  pointer-events: none;
+  z-index: 0;
+}
+.heart::before, .heart::after {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: #b344b3;
+  border-radius: 50%;
+}
+.heart::before { top: -10px; left: 0; }
+.heart::after { left: 10px; top: 0; }
+@keyframes float {
+  0% { transform: translate(0,0) rotate(-45deg); opacity:0.8; }
+  100% { transform: translate(calc(-200px + 400px * var(--rand-x)), -600px) rotate(-45deg); opacity:0; }
+}
+</style>
+<body>
+<header>
+  <h1 id="groupTitle">Group 💜</h1>
+  <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+    <button id="toggleViewBtn">Switch to List View</button>
+    <button id="homeBtn">🏠 Home</button>
+  </div>
+</header>
+
+<div id="itemsContainer"></div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const params = new URLSearchParams(window.location.search);
+  const groupId = params.get("id");
+  if(!groupId){ alert("Group not specified"); return; }
+
+  const groupTitle = document.getElementById("groupTitle");
+  const itemsContainer = document.getElementById("itemsContainer");
+  const toggleViewBtn = document.getElementById("toggleViewBtn");
+  const homeBtn = document.getElementById("homeBtn");
+
+  homeBtn.addEventListener("click", ()=>{ window.location.href="index.html"; });
+
+  function logViewAction() {
+    db.collection("sections").doc(groupId).collection("views")
+      .add({ timestamp: firebase.firestore.FieldValue.serverTimestamp() })
+      .catch(err => console.error("Error logging view:", err));
+  }
+
+  db.collection("sections").doc(groupId).get().then(doc=>{
+    if(!doc.exists){ itemsContainer.textContent="No items found"; return; }
+
+    const items = doc.data().items || [];
+    groupTitle.textContent = doc.data().name || groupId;
+    localStorage.setItem(`lastOpened_${groupId}`, Date.now());
+
+    let listView = false;
+    let currentIndex = 0;
+
+    function render() {
+      itemsContainer.innerHTML = "";
+      if(listView){
+        items.forEach(txt=>{
+          const div = document.createElement("div");
+          div.className="list-card";
+          div.textContent=txt;
+          itemsContainer.appendChild(div);
+        });
+        toggleViewBtn.textContent="Switch to Random View";
+      } else {
+        if(items.length===0){ itemsContainer.textContent="No items"; return; }
+        const div = document.createElement("div");
+        div.className="card swipe-in";
+        div.textContent=items[currentIndex];
+        itemsContainer.appendChild(div);
+
+        const nextBtn = document.createElement("button");
+        nextBtn.textContent="Next";
+        nextBtn.addEventListener("click", ()=>{
+          div.classList.add("swipe-out");
+          div.addEventListener("transitionend", ()=>{
+            currentIndex = (currentIndex+1)%items.length;
+            render();
+          }, {once:true});
+          logViewAction();
+        });
+        itemsContainer.appendChild(nextBtn);
+        toggleViewBtn.textContent="Switch to List View";
+      }
+    }
+
+    render();
+
+    toggleViewBtn.addEventListener("click", ()=>{
+      listView=!listView;
+      render();
+      logViewAction();
+    });
+  });
+
+  // Floating hearts
+  function createHeart() {
+    const heart = document.createElement("div");
+    heart.className = "heart";
+    heart.style.left = Math.random() * window.innerWidth + "px";
+    heart.style.setProperty('--rand-x', Math.random());
+    document.body.appendChild(heart);
+    setTimeout(() => { heart.remove(); }, 4000);
+  }
+  setInterval(createHeart, 500);
+
+});
+</script>
+</body>
+</html>
